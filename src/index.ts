@@ -156,7 +156,7 @@ class ExpoMixpanelAnalytics {
 // Hooks API
 const useExpoMixpanelAnalytics = (
   token: string,
-  storageKey = "mixpanel:super:props"
+  _storageKey = "mixpanel:super:props"
 ) => {
   const [mixpanelInstance, setMixpanelInstance] =
     useState<ExpoMixpanelAnalytics | null>(null);
