@@ -1,6 +1,6 @@
 {
   "name": "@theafolayan/expo-mixpanel-analytics",
-  "version": "2.0.3",
+  "version": "1.0.0",
   "description": "Mixpanel integration for use with React Native apps compatible with built on the latest expo SDKs > 51.",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
