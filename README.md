@@ -1,6 +1,20 @@
 # Expo Mixpanel Analytics
 
-Mixpanel integration for use with React Native apps built on Expo.
+**Up to date** Mixpanel integration for use with React Native apps built on Expo.
+
+A comprehensive analytics integration for React Native and Expo apps, allowing seamless connection to Mixpanel. This package provides developers with the flexibility to choose between a hook-based API or a singleton approach for tracking events, identifying users, and managing user profiles.
+
+With automatic device information capture, support for super properties, and an easy-to-use interface that simplifies integrating Mixpanel into your mobile applications.
+
+## Key Features
+
+- Supports both React hooks and traditional singleton APIs.
+- Track user events, identify users, and manage profile information.
+- Automatically collects device details such as platform, screen size, OS version, and more.
+- Persistent super properties across all tracked events.
+Easily integrates with Expo and React Native environments.
+
+### Credits
 
 Forked from `@bothrs/expo-mixpanel-analytics` to add support for expo SDK 50 & Above.
 
