@@ -1,15 +1,15 @@
+import { useState, useEffect, useCallback } from "react";
 import { Platform, Dimensions } from "react-native";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-
 import { Buffer } from "buffer";
 
 const MIXPANEL_API_URL = "https://api.mixpanel.com";
 
-export class ExpoMixpanelAnalytics {
+// Singleton Class
+class ExpoMixpanelAnalytics {
+  static instance: ExpoMixpanelAnalytics | null = null;
   ready = false;
   token: string;
   storageKey: string;
@@ -20,14 +20,14 @@ export class ExpoMixpanelAnalytics {
   queue: any[] = [];
   constants: { [key: string]: string | number | void } = {};
   superProps: any = {};
-  brand?:string
+  brand?: string;
 
-  constructor(token, storageKey = "mixpanel:super:props") {
+  private constructor(token: string, storageKey = "mixpanel:super:props") {
     this.storageKey = storageKey;
-
     this.token = token;
     this.userId = null;
-    this.clientId = Constants.deviceId
+    this.clientId = Constants.deviceId;
+
     this.constants = {
       app_build_number: Constants.manifest?.revisionId,
       app_id: Constants.manifest?.slug,
@@ -39,7 +39,6 @@ export class ExpoMixpanelAnalytics {
     };
 
     Constants.getWebViewUserAgentAsync().then((userAgent) => {
-      // @ts-ignore
       const { width, height } = Dimensions.get("window");
       Object.assign(this.constants, {
         screen_height: height,
@@ -48,10 +47,9 @@ export class ExpoMixpanelAnalytics {
         user_agent: userAgent,
       });
 
-      this.brand = Device.brand|| undefined;
+      this.brand = Device.brand || undefined;
       this.platform = Platform.OS;
       this.model = Device.modelName || undefined;
-
 
       AsyncStorage.getItem(this.storageKey, (_, result) => {
         if (result) {
@@ -66,6 +64,15 @@ export class ExpoMixpanelAnalytics {
     });
   }
 
+  // Singleton instance
+  static getInstance(token: string) {
+    if (!ExpoMixpanelAnalytics.instance) {
+      ExpoMixpanelAnalytics.instance = new ExpoMixpanelAnalytics(token);
+    }
+    return ExpoMixpanelAnalytics.instance;
+  }
+
+  // Register super properties
   register(props: any) {
     this.superProps = props;
     try {
@@ -73,18 +80,18 @@ export class ExpoMixpanelAnalytics {
     } catch {}
   }
 
+  // Track an event
   track(name: string, props?: any) {
-    this.queue.push({
-      name,
-      props,
-    });
+    this.queue.push({ name, props });
     this._flush();
   }
 
+  // Identify user
   identify(userId?: string) {
     this.userId = userId;
   }
 
+  // Reset user and super properties
   reset() {
     this.identify(this.clientId);
     try {
@@ -92,35 +99,21 @@ export class ExpoMixpanelAnalytics {
     } catch {}
   }
 
-  people_set(props) {
+  // People methods for managing user profiles
+  peopleSet(props: any) {
     this._people("set", props);
   }
 
-  people_set_once(props) {
-    this._people("set_once", props);
+  _people(operation: string, props: any) {
+    if (this.userId) {
+      const data = {
+        $token: this.token,
+        $distinct_id: this.userId,
+      };
+      data[`$${operation}`] = props;
+      this._pushProfile(data);
+    }
   }
-
-  people_unset(props) {
-    this._people("unset", props);
-  }
-
-  people_increment(props) {
-    this._people("add", props);
-  }
-
-  people_append(props) {
-    this._people("append", props);
-  }
-
-  people_union(props) {
-    this._people("union", props);
-  }
-
-  people_delete_user() {
-    this._people("delete", "");
-  }
-
-  // ===========================================================================================
 
   _flush() {
     if (this.ready) {
@@ -131,20 +124,8 @@ export class ExpoMixpanelAnalytics {
     }
   }
 
-  _people(operation, props) {
-    if (this.userId) {
-      const data = {
-        $token: this.token,
-        $distinct_id: this.userId,
-      };
-      data[`$${operation}`] = props;
-
-      this._pushProfile(data);
-    }
-  }
-
-  _pushEvent(event) {
-    let data = {
+  _pushEvent(event: any) {
+    const data = {
       event: event.name,
       properties: {
         ...this.constants,
@@ -152,27 +133,94 @@ export class ExpoMixpanelAnalytics {
         ...this.superProps,
       },
     };
+
     if (this.userId) {
       data.properties.distinct_id = this.userId;
     }
+
     data.properties.token = this.token;
     data.properties.client_id = this.clientId;
-    if (this.platform) {
-      data.properties.platform = this.platform;
-    }
-    if (this.model) {
-      data.properties.model = this.model;
-    }
+    data.properties.platform = this.platform;
+    data.properties.model = this.model;
 
     const buffer = new Buffer(JSON.stringify(data)).toString("base64");
-
     return fetch(`${MIXPANEL_API_URL}/track/?data=${buffer}`);
   }
 
-  _pushProfile(data) {
-    data = new Buffer(JSON.stringify(data)).toString("base64");
-    return fetch(`${MIXPANEL_API_URL}/engage/?data=${data}`);
+  _pushProfile(data: any) {
+    const buffer = new Buffer(JSON.stringify(data)).toString("base64");
+    return fetch(`${MIXPANEL_API_URL}/engage/?data=${buffer}`);
   }
 }
 
-export default ExpoMixpanelAnalytics;
+// Hooks API
+const useExpoMixpanelAnalytics = (
+  token: string,
+  storageKey = "mixpanel:super:props"
+) => {
+  const [mixpanelInstance, setMixpanelInstance] =
+    useState<ExpoMixpanelAnalytics | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const instance = ExpoMixpanelAnalytics.getInstance(token);
+    setMixpanelInstance(instance);
+
+    if (instance.ready) {
+      setReady(true);
+    }
+  }, [token]);
+
+  const register = useCallback(
+    (props: any) => {
+      if (mixpanelInstance) {
+        mixpanelInstance.register(props);
+      }
+    },
+    [mixpanelInstance]
+  );
+
+  const track = useCallback(
+    (name: string, props?: any) => {
+      if (mixpanelInstance) {
+        mixpanelInstance.track(name, props);
+      }
+    },
+    [mixpanelInstance]
+  );
+
+  const identify = useCallback(
+    (userId: string) => {
+      if (mixpanelInstance) {
+        mixpanelInstance.identify(userId);
+      }
+    },
+    [mixpanelInstance]
+  );
+
+  const reset = useCallback(() => {
+    if (mixpanelInstance) {
+      mixpanelInstance.reset();
+    }
+  }, [mixpanelInstance]);
+
+  const peopleSet = useCallback(
+    (props: any) => {
+      if (mixpanelInstance) {
+        mixpanelInstance.peopleSet(props);
+      }
+    },
+    [mixpanelInstance]
+  );
+
+  return {
+    ready,
+    register,
+    track,
+    identify,
+    reset,
+    peopleSet,
+  };
+};
+
+export { ExpoMixpanelAnalytics, useExpoMixpanelAnalytics };

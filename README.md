@@ -2,51 +2,104 @@
 
 Mixpanel integration for use with React Native apps built on Expo.
 
-Forked from `@benawad/expo-mixpanel-analytics` to add support for Expo 39.
+Forked from `@bothrs/expo-mixpanel-analytics` to add support for expo SDK 50 & Above.
 
 ## Installation
 
-```
-npm install @bothrs/expo-mixpanel-analytics --save
+```bash
+npx expo install @theafolayan/expo-mixpanel-analytics --save
 ```
 
-## Import
+## Default Parameters
 
 Your React Native app's screen resolution, app name, app ID, app version, device information and multiple other parameters will be automatically resolved and sent with each event.
 
-```
-import ExpoMixpanelAnalytics from '@bothrs/expo-mixpanel-analytics';
-```
+## Explanation
+
+- Singleton Class (`ExpoMixpanelAnalytics`): This provides global access to Mixpanel's core methods like `track()`, `identify()`, `reset()`, and `peopleSet()`. It's initialized only once and shared throughout the app.
+
+- Hooks API (`useExpoMixpanelAnalytics`): The hook wraps around the singleton, allowing you to use Mixpanel's features within a functional component. The hook initializes the singleton and provides functions like `track()`, `identify()`, and `reset()`.
 
 ## Usage
 
-```
-const analytics = new ExpoMixpanelAnalytics("5224da5bbbed3fdeaad0911820f1bf2x");
+## Singleton Usage
 
-analytics.identify("13793");
+```javascript
+import { ExpoMixpanelAnalytics } from "@theafolayan/expo-mixpanel-analytics";
 
-analytics.register({ email: "bob@bob.com" }); // super props sent on every request and persisted in AsyncStorage
+// Get the singleton instance
+const mixpanel = ExpoMixpanelAnalytics.getInstance("your_mixpanel_token");
 
-analytics.track("Signed Up", { "Referred By": "Friend" });
+// Track an event
+mixpanel.track("ButtonClicked", { button_name: "Submit" });
 
-analytics.people_set({ "$first_name": "Joe", "$last_name": "Doe", "$email": "joe.doe@example.com", "$created": "2013-04-01T13:20:00", "$phone": "4805551212", "Address": "1313 Mockingbird Lane", "Birthday": "1948-01-01" });
+// Identify a user
+mixpanel.identify("user_12345");
 
-analytics.people_set_once({ "First login date": "2013-04-01T13:20:00" });
+// Set user profile properties
+mixpanel.peopleSet({ plan: "Pro", last_login: new Date() });
 
-analytics.people_unset([ "Days Overdue" ]);
+// Reset user identity and clear super properties
+mixpanel.reset();
 
-analytics.people_increment({ "Coins Gathered": 12 });
-
-analytics.people_append({ "Power Ups": "Bubble Lead" });
-
-analytics.people_union({ "Items purchased": ["socks", "shirts"] });
-
-analytics.people_delete_user();
-
-analytics.reset();
 
 ```
+
+## 2. Hooks Usage
+
+```javascript
+import React, { useEffect } from "react";
+import { View, Button } from "react-native";
+import { useExpoMixpanelAnalytics } from "@theafolayan/expo-mixpanel-analytics";
+
+const MyApp = () => {
+  const { ready, track, identify, peopleSet, reset } = useExpoMixpanelAnalytics("your_mixpanel_token");
+
+  useEffect(() => {
+    if (ready) {
+      // Identify the user
+      identify("user_12345");
+
+      // Track an event
+      track("AppLoaded");
+
+      // Set user profile properties
+      peopleSet({ plan: "Pro", login_count: 1 });
+    }
+  }, [ready, track, identify, peopleSet]);
+
+  return (
+    <View>
+      <Button title="Track Purchase" onPress={() => track("Purchase", { product: "Shoes", price: 99.99 })} />
+      <Button title="Reset User" onPress={reset} />
+    </View>
+  );
+};
+
+export default MyApp;
+
+```
+
+## API
+
+### Singleton API
+
+- `track(eventName: string, props?: object)`: Tracks an event with optional properties.
+- `identify(userId: string)`: Identifies the user for Mixpanel tracking.
+- `register(superProps: object)`: Registers super properties that are included with every event.
+
+- `reset()`: Resets the user identity and clears super properties.
+- `peopleSet(props: object)`: Sets user profile properties.
+
+## Hooks API
+
+- `track(eventName: string, props?: object`): Tracks an event with optional properties.
+- `identify(userId: string)`: Identifies the user for Mixpanel tracking.
+- `register(superProps: object)`: Registers super properties that are included with every event.
+- `reset()`: Resets the user identity and clears super properties.
+- `peopleSet(props: object)`: Sets user profile properties.
+- `ready: boolean`: Indicates if Mixpanel is initialized and ready.
 
 ## References
 
-https://mixpanel.com/help/reference/http
+[Mixpanel HTTP API Reference](https://developer.mixpanel.com/reference/overview)
